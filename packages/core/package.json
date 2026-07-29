@@ -1,0 +1,90 @@
+{
+  "name": "@tokenwise/core",
+  "version": "0.2.0",
+  "description": "Production-grade token optimization engine for AI coding assistants — symbol-aware context distillation with real token counting and AST parsing",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./parser": {
+      "import": "./dist/parser/index.js",
+      "types": "./dist/parser/index.d.ts"
+    },
+    "./tokenizer": {
+      "import": "./dist/tokenizer/index.js",
+      "types": "./dist/tokenizer/index.d.ts"
+    },
+    "./extractors": {
+      "import": "./dist/extractors/index.js",
+      "types": "./dist/extractors/index.d.ts"
+    },
+    "./compressors": {
+      "import": "./dist/compressors/index.js",
+      "types": "./dist/compressors/index.d.ts"
+    },
+    "./strategies": {
+      "import": "./dist/strategies/index.js",
+      "types": "./dist/strategies/index.d.ts"
+    },
+    "./graph": {
+      "import": "./dist/graph/index.js",
+      "types": "./dist/graph/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "benchmark": "vitest run --config vitest.bench.config.ts",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "tokens",
+    "code",
+    "context",
+    "optimization",
+    "token-reduction",
+    "ast",
+    "tree-sitter",
+    "tiktoken",
+    "copilot",
+    "cursor",
+    "claude",
+    "codex"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@dqbd/tiktoken": "^1.0.22",
+    "zod": "^3.23.8"
+  },
+  "optionalDependencies": {
+    "web-tree-sitter": "^0.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

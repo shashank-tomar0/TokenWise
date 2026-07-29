@@ -1,0 +1,25 @@
+{
+  "name": "tokenwise",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Token-optimized code context extraction for AI coding assistants",
+  "scripts": {
+    "build": "npm run build -w packages/core && npm run build -w packages/easy && npm run build -w packages/cli",
+    "dev": "npm run dev -w packages/core",
+    "test": "npm run test -w packages/core",
+    "typecheck": "npm run typecheck -w packages/core"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "tokens",
+    "code",
+    "context",
+    "optimization",
+    "token-reduction",
+    "ast",
+    "tree-sitter"
+  ],
+  "author": "",
+  "license": "MIT"
+}
