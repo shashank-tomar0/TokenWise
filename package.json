@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "description": "Token-optimized code context extraction for AI coding assistants",
+  "workspaces": [
+    "packages/core",
+    "packages/easy",
+    "packages/cli"
+  ],
   "scripts": {
     "build": "npm run build -w packages/core && npm run build -w packages/easy && npm run build -w packages/cli",
     "dev": "npm run dev -w packages/core",
     "test": "npm run test -w packages/core",
-    "typecheck": "npm run typecheck -w packages/core"
+    "typecheck": "cd packages/core && npx tsc --noEmit",
+    "mcp": "node packages/core/dist/mcp-server/index.js"
   },
   "keywords": [
     "ai",

@@ -29,3 +29,7 @@ export type { GraphBuildOptions, GraphQueryResult } from './graph/index.js';
 // Strategy Engine
 export { selectStrategy, rankSymbols, applyStrategySelection, allocateBudget, STRATEGY_PROFILES } from './strategies/index.js';
 export type { SelectedStrategy, BudgetAllocation, RankedSymbol } from './strategies/index.js';
+
+// MCP Integration
+export { handleToolCall, TOOL_DEFINITIONS } from './mcp/index.js';
+export type { McpToolDefinition, McpToolResponse } from './mcp/index.js';
