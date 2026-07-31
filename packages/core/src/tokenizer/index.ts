@@ -131,7 +131,13 @@ export class CodeTokenEstimator {
         tokens += 1; i++;
       } else {
         // Unicode → 2-4 tokens depending on byte length
-        const bytes = encodeURIComponent(char).replace(/%/g, '').length / 2;
+        // Wrap in try/catch: encodeURIComponent throws on lone surrogates (e.g. raw emoji)
+        let bytes = 4;
+        try {
+          bytes = encodeURIComponent(char).replace(/%/g, '').length / 2;
+        } catch {
+          bytes = 4; // lone surrogate — assume worst case
+        }
         tokens += bytes <= 2 ? 2 : bytes <= 3 ? 3 : 4;
         i += char.length;
       }

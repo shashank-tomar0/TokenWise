@@ -30,6 +30,10 @@ export type { GraphBuildOptions, GraphQueryResult } from './graph/index.js';
 export { selectStrategy, rankSymbols, applyStrategySelection, allocateBudget, STRATEGY_PROFILES } from './strategies/index.js';
 export type { SelectedStrategy, BudgetAllocation, RankedSymbol } from './strategies/index.js';
 
+// Codebase Walker
+export { analyzeCodebase, extractCodebaseContext } from './codebase/index.js';
+export type { CodebaseFile, CodebaseAnalysis, CodebaseOptions } from './codebase/index.js';
+
 // MCP Integration
 export { handleToolCall, TOOL_DEFINITIONS } from './mcp/index.js';
 export type { McpToolDefinition, McpToolResponse } from './mcp/index.js';
