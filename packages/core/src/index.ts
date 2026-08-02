@@ -34,6 +34,18 @@ export type { SelectedStrategy, BudgetAllocation, RankedSymbol } from './strateg
 export { analyzeCodebase, extractCodebaseContext } from './codebase/index.js';
 export type { CodebaseFile, CodebaseAnalysis, CodebaseOptions } from './codebase/index.js';
 
+// Semantic Relevance
+export { tokenizeText, termFrequency, inverseDocumentFrequency, cosineSimilarity, createSemanticIndex, scoreSymbols, rankBySemantics, findRelatedSymbols } from './semantic/index.js';
+export type { SemanticIndex, SymbolScore } from './semantic/index.js';
+
+// Budget Visualizer
+export { visualizeBudget, formatBudgetText, formatBudgetJSON, estimateSavings, Visualizer } from './visualize/index.js';
+export type { BudgetBreakdown, PerSymbolBreakdown, SavingsEstimate } from './visualize/index.js';
+
+// Context Restoration
+export { createRestoreMap, restoreSymbol, restoreChunk, formatRestoreMap } from './restore/index.js';
+export type { RestoreMap, RestoreEntry } from './restore/index.js';
+
 // MCP Integration
 export { handleToolCall, TOOL_DEFINITIONS } from './mcp/index.js';
 export type { McpToolDefinition, McpToolResponse } from './mcp/index.js';

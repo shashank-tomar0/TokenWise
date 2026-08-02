@@ -1,0 +1,28 @@
+name: 'TokenWise Optimize Context'
+description: 'Auto-optimize code context for AI agents on PRs and issues'
+author: 'TokenWise'
+branding:
+  icon: 'zap'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'Path to the repository root to analyze (relative to GITHUB_WORKSPACE)'
+    required: false
+    default: '.'
+  target-tokens:
+    description: 'Target token budget for the optimized context'
+    required: false
+    default: '8000'
+  strategy:
+    description: 'Optimization strategy (adaptive, relevance, conservative)'
+    required: false
+    default: 'adaptive'
+
+outputs:
+  optimized-context:
+    description: 'Path to the generated optimized-context.txt file'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

@@ -6,7 +6,8 @@
   "workspaces": [
     "packages/core",
     "packages/easy",
-    "packages/cli"
+    "packages/cli",
+    "packages/action"
   ],
   "scripts": {
     "build": "npm run build -w packages/core && npm run build -w packages/easy && npm run build -w packages/cli",

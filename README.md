@@ -1,300 +1,319 @@
-# TokenWise
+# TokenWise — Symbol-Aware Context Distillation for AI Coding Assistants
 
-**Reduce AI coding context tokens by 70-90% while preserving meaning.**
+[![npm](https://img.shields.io/npm/v/@tokenwise/core?label=@tokenwise/core)](https://www.npmjs.com/package/@tokenwise/core)
+[![build](https://img.shields.io/github/actions/workflow/status/tokenwise/tokenwise/ci.yml?branch=main&label=build)](https://github.com/tokenwise/tokenwise/actions)
+[![tests](https://img.shields.io/github/actions/workflow/status/tokenwise/tokenwise/ci.yml?branch=main&label=tests)](https://github.com/tokenwise/tokenwise/actions)
+[![license](https://img.shields.io/npm/l/@tokenwise/core)](https://github.com/tokenwise/tokenwise/blob/main/LICENSE)
 
-TokenWise is a JavaScript/TypeScript library and CLI tool for optimizing code context for AI coding assistants like GitHub Copilot, Cursor, Claude Code, and Continue.
+---
 
-## Why TokenWise?
+**TokenWise** reduces the token cost of sending code to LLMs by 50–80% while preserving the symbols that matter for your task. It parses code into a symbol graph, ranks by call-graph centrality and task relevance, then emits a budget-aware context.
 
-When you send code to an AI assistant, you're burning tokens on:
+## What It Does
 
-- **Imports you don't need** for the current task
-- **Boilerplate code** that AI already knows
-- **Inactive functions** that won't be touched
-- **Comments and whitespace** that add noise
-- **Entire files** when only one function matters
-
-TokenWise solves this by intelligently extracting only the context that matters.
+```
+Input code  →  Parse (tree-sitter + regex)  →  Build call graph + PageRank
+    │                                                          │
+    └─▶ Select strategy (adaptive or explicit) ───────────────┘
+                        │
+                        ▼
+            Rank symbols by:
+              • Visibility (exported/public)
+              • Call frequency & PageRank centrality
+              • Type importance (class > function > variable)
+              • Cyclomatic complexity
+              • Task prompt relevance (TF-IDF semantic match)
+                        │
+                        ▼
+            Greedy fill until token budget exhausted
+                        │
+                        ▼
+            Serialize: imports + signatures + selected bodies + docs
+                        │
+                        ▼
+            Output: optimized context + chunk metadata + token stats
+```
 
 ## Features
 
-- 🚀 **70-90% token reduction** through smart extraction
-- 🌲 **AST-based symbol extraction** using tree-sitter patterns
-- 📊 **Multiple strategies**: signature-only, token-budget, relevant-symbols
-- 💾 **Token counting** (OpenAI-compatible)
-- 📦 **Framework agnostic**: Works with any AI coding tool
-- 🔌 **Multiple interfaces**: Core library, easy API, CLI
-- 🌐 **Multi-language**: TypeScript, JavaScript, Python, Go, Rust, and more
-- ⚡ **Fast**: No external API calls, runs locally
-
-## Installation
-
-```bash
-# As an npm package
-npm install @tokenwise/core
-
-# For high-level API
-npm install @tokenwise/easy
-
-# CLI
-npm install -g @tokenwise/cli
-```
+| Capability | Description |
+|------------|-------------|
+| **13-language parser** | Tree-sitter WASM for TS/JS/Python/Go/Rust/Java/C++/C/Ruby/PHP/C#/Swift/Kotlin, with zero-dependency regex fallback |
+| **Real BPE tokenization** | `@dqbd/tiktoken` (cl100k_base, p50k_base, r50k_base, o200k_base) + calibrated estimator fallback |
+| **Call-graph analysis** | Builds directed graph (calls, imports, inheritance), runs PageRank (20 iterations), finds hot paths & orphaned symbols |
+| **5 extraction strategies** | `aggressive` / `balanced` / `preservative` / `semantic` / `adaptive` (auto-selects) |
+| **7 task-type profiles** | `bug-fix`, `feature-add`, `code-review`, `refactor`, `explain`, `document`, `test-write` — each adjusts weights |
+| **Model profiles** | 11 models with context windows, recommended budgets, and default strategies |
+| **TF-IDF semantic ranking** | `tokenizeText`, `termFrequency`, `inverseDocumentFrequency`, `cosineSimilarity`, `createSemanticIndex`, `scoreSymbols`, `rankBySemantics`, `findRelatedSymbols` |
+| **Budget visualizer** | `visualizeBudget`, `formatBudgetText` (ASCII bars), `formatBudgetJSON`, `estimateSavings` |
+| **Context restoration map** | *(planned)* — `createRestoreMap`, `restoreSymbol`, `restoreChunk`, `formatRestoreMap` |
+| **MCP server (6 tools)** | `optimize_context`, `compress_code`, `count_tokens`, `extract_diff`, `parse_code`, `analyze_context` — runs via `npx tokenwise-mcp` |
+| **Codebase walker** | `analyzeCodebase`, `extractCodebaseContext` — multi-file scan, cross-file import graph, entry-point detection |
+| **GitHub Action** | `tokenwise/action` — PR comment with token reduction report |
 
 ## Quick Start
 
-### JavaScript / TypeScript
-
-```typescript
-import { optimizeContext } from '@tokenwise/core';
-
-// A 500-line file becomes ~50 lines of signatures
-const result = optimizeContext(yourCode, {
-  language: 'typescript',
-  includeSignatures: true,
-  includeBodies: false, // Only signatures
-});
-
-console.log(`Reduced by ${result.reductionPercent}%`);
-console.log(result.code);
+```bash
+npm install @tokenwise/core
 ```
 
-### Easy API
+```ts
+import {
+  optimizeContext,
+  optimizeContextSync,
+  countTokens,
+  parseCodeSync,
+  // Core pipeline
+  buildGraph,
+  rankSymbols,
+  selectStrategy,
+  // Types
+  type OptimizationOptions,
+  type OptimizationResult,
+  type Symbol,
+  type Language,
+  type Model,
+  type ExtractionStrategy,
+  type TaskType,
+  // Tokenizer
+  Tokenizer,
+  CodeTokenEstimator,
+  estimateTokens,
+  splitToFit,
+  // Compression
+  compress,
+  smartCompress,
+  compressFull,
+  // Codebase
+  analyzeCodebase,
+  extractCodebaseContext,
+  // MCP
+  handleToolCall,
+  TOOL_DEFINITIONS,
+} from '@tokenwise/core';
 
-```typescript
-import { optimizeContext } from '@tokenwise/easy';
+// Optional subpath imports (tree-shakeable)
+import {
+  tokenizeText,
+  termFrequency,
+  inverseDocumentFrequency,
+  cosineSimilarity,
+  createSemanticIndex,
+  scoreSymbols,
+  rankBySemantics,
+  findRelatedSymbols,
+  type SemanticIndex,
+  type SymbolScore,
+} from '@tokenwise/core/semantic';
 
-// Simple one-liner
-const optimized = optimizeContext(code, {
-  targetTokens: 500, // Auto-fit to~500 tokens
-});
+import {
+  visualizeBudget,
+  formatBudgetText,
+  formatBudgetJSON,
+  estimateSavings,
+  type BudgetBreakdown,
+  type SavingsEstimate,
+  Visualizer,
+} from '@tokenwise/core/visualize';
+
+import {
+  createRestoreMap,
+  restoreSymbol,
+  restoreChunk,
+  formatRestoreMap,
+  type RestoreMap,
+} from '@tokenwise/core/restore';
 ```
 
-### CLI
+### Basic optimization
+
+```ts
+const code = await fs.readFile('src/utils.ts', 'utf-8');
+
+// Async (uses tree-sitter if available, builds call graph)
+const result = await optimizeContext(code, {
+  model: 'claude-3-sonnet',
+  taskType: 'bug-fix',
+  taskPrompt: 'Fix the race condition in ConnectionPool',
+  strategy: 'adaptive', // auto-selects
+});
+
+// Sync (regex parser only, no graph — faster, less accurate)
+const quick = optimizeContextSync(code, {
+  model: 'gpt-4',
+  strategy: 'balanced',
+});
+
+console.log(`Reduced ${result.originalTokens} → ${result.optimizedTokens} tokens (${result.reductionPercent}%)`);
+console.log(result.code); // Send this to the LLM
+```
+
+### Budget visualization
+
+```ts
+const result = await optimizeContext(code, { model: 'claude-3-sonnet' });
+
+// ASCII bar chart
+console.log(formatBudgetText(result));
+// symbols   ████████████ 78.4% (1,203 tok)
+// imports   ████ 15.2% (233 tok)
+// overhead  ██ 6.4% (98 tok)
+// 
+// total        1,534 tokens
+// reduction    62.3%
+//
+// Top symbols by tokens:
+//   ConnectionPool           1,203 tok (42.3%) ●
+//   acquireConnection          312 tok (11.0%) ○
+//   releaseConnection          287 tok (10.1%) ○
+```
+
+### Semantic relevance (TF-IDF)
+
+```ts
+import { createSemanticIndex, scoreSymbols } from '@tokenwise/core/semantic';
+import { parseCodeSync } from '@tokenwise/core';
+
+const symbols = parseCodeSync(code, 'typescript');
+const index = createSemanticIndex(symbols);
+
+// Rank by relevance to a natural-language prompt
+const scored = scoreSymbols(index, 'How does the connection pool handle timeouts?');
+// [{ symbol: Symbol, score: 0.87 }, ...]
+```
+
+### Token counting
+
+```ts
+import { Tokenizer, countTokens, estimateTokens, splitToFit } from '@tokenwise/core';
+
+const tokenizer = new Tokenizer({ encoding: 'cl100k_base' });
+const tokens = tokenizer.count(code);           // exact BPE count
+const fast = countTokens(code);                 // convenience (cl100k_base)
+const { tokens: est, chars, words, lines } = estimateTokens(code); // fast estimator
+const chunks = splitToFit(code, 8000);          // split to fit a context window
+```
+
+### Codebase-wide context
+
+```ts
+import { analyzeCodebase, extractCodebaseContext } from '@tokenwise/core';
+
+const analysis = analyzeCodebase('./my-project', {
+  maxFiles: 200,
+  detectEntryPoints: true,
+});
+
+const { context, tokenCount, relevantFiles, relevantSymbols } =
+  await extractCodebaseContext(analysis, 'Add retry logic to HTTP client', 50_000);
+```
+
+## MCP Server
+
+The MCP server exposes 6 tools over stdio (JSON-RPC 2.0).
 
 ```bash
-# Count tokens in a file
-tokenwise count src/utils.ts
+# Run directly
+npx tokenwise-mcp
 
-# Optimize for AI context
-tokenwise optimize src/complex-algorithm.ts -s
-
-# Show only what changed
-tokenwise diff original.ts modified.ts
-
-# Output to file
-tokenwise optimize src/app.ts -o ai-context.ts
+# Or with config for Claude Code / Cursor
 ```
 
-## API Reference
+**Claude Code (`~/.claude/claude_desktop_config.json`):**
 
-### optimizeContext(code, options)
-
-Main function for token optimization.
-
-```typescript
-interface OptimizeOptions {
-  // Constraints
-  targetTokens?: number;     // Soft target
-  maxTokens?: number;       // Hard limit
-
-  // What to include
-  includeSignatures?: boolean;       // Function declarations (default: true)
-  includeTypeDefinitions?: boolean; // Interfaces, types, enums (default: true)
-  includeImports?: boolean;          // Import statements (default: true)
-  includeDocstrings?: boolean;       // JSDoc/comments (default: false)
-  includeBodies?: boolean;           // Full implementations (default: true)
-
-  // Targeting
-  relevantSymbols?: string[];  // Only include specific symbols
-  callGraph?: boolean;         // Include called functions
-  callGraphDepth?: number;      // How deep to trace
-  includeDependencies?: boolean;
-
-  // Language
-  language?: 'typescript' | 'javascript' | 'python' | 'go' | 'rust' | 'java';
-  encoding?: 'cl100k_base' | 'p50k_base' | 'r50k_base';
+```json
+{
+  "mcpServers": {
+    "tokenwise": {
+      "command": "npx",
+      "args": ["tokenwise-mcp"],
+      "env": {}
+    }
+  }
 }
 ```
 
-### compressContext(code, options)
+**Cursor (`.cursor/mcp.json`):**
 
-Aggressive compression that removes comments and whitespace.
-
-```typescript
-compressContext(code, {
-  removeComments: true,
-  removeBlankLines: true,
-  collapseWhitespace: true,
-});
+```json
+{
+  "mcpServers": {
+    "tokenwise": {
+      "command": "npx",
+      "args": ["tokenwise-mcp"]
+    }
+  }
+}
 ```
 
-### extractDiff(original, modified)
+**Available tools:**
 
-Extract only the symbols that changed between two files.
+| Tool | Description |
+|------|-------------|
+| `optimize_context` | Full pipeline — parse, graph, rank, select, serialize |
+| `compress_code` | Strip comments/whitespace, optional aggressive minify |
+| `count_tokens` | Exact BPE token count with tiktoken |
+| `extract_diff` | Changed symbols between two file versions |
+| `parse_code` | Extract all symbols with metadata |
+| `analyze_context` | File stats, symbol breakdown, graph metrics |
 
-```typescript
-const result = extractDiff(originalCode, modifiedCode);
-// Perfect for PR reviews
-```
-
-## Token Reduction Examples
-
-| File Size | Original Tokens | Optimized | Reduction |
-|-----------|----------------|-----------|-----------|
-| 100 lines | ~250 | ~50 | 80% |
-| 500 lines | ~1250 | ~200 | 84% |
-| 1000 lines | ~2500 | ~300 | 88% |
-| 5000 lines | ~12500 | ~750 | 94% |
-
-## CLI Reference
+## CLI
 
 ```bash
-# Count tokens
-tokenwise count <file>
-
-# Optimize
-tokenwise optimize <file> [options]
-  -o, --output <file>        Output file
-  -t, --target-tokens <n>    Target token count
-  -m, --max-tokens <n>      Maximum tokens
-  -l, --language <lang>      Language override
-  -s, --signatures-only      Only signatures
-  -c, --compress             Apply compression
-
-# Diff extraction
-tokenwise diff <original> <modified>
-
-# Batch (coming soon)
-tokenwise batch <directory>
+npx @tokenwise/cli optimize src/**/*.ts --model claude-3-sonnet --task bug-fix
+npx @tokenwise/cli count src/index.ts
+npx @tokenwise/cli parse src/utils.ts --format json
+npx @tokenwise/cli visualize src/main.ts
 ```
 
 ## Architecture
 
 ```
-@tokenwise/
-├── core/              # Core extraction logic
-│   ├── parser/        # Language-specific parsing
-│   ├── extractors/    # Symbol extraction strategies
-│   ├── compressors/   # Text compression utilities
-│   └── tokenizer.ts   # Token counting
-│
-├── easy/              # High-level API
-│   └── index.ts
-│
-├── cli/               # Command-line tool
-│   └── index.ts
-│
-└── [future]
-    ├── vscode/        # VS Code extension
-    ├── embeddings/    # Semantic search
-    └── rag/           # Advanced RAG pipeline
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        TOKENWISE CORE PIPELINE                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  INPUT          PARSE           GRAPH BUILD         PAGERANK
+┌──────────┐  ┌──────────┐    ┌──────────────┐    ┌──────────────┐
+│ (code,   │─▶│ (tree-   │───▶│ (calls,      │───▶│ (iterative   │
+│ options) │  │  sitter  │    │  imports,    │    │  centrality  │
+│          │  │ + regex) │    │  inheritance)│    │  on directed │
+└──────────┘  └──────────┘    └──────────────┘    │    graph)    │
+                                                 └──────┬───────┘
+                                                        │
+                                                        ▼
+  OUTPUT        SERIALIZE         SELECTION          STRATEGY
+┌──────────┐  ┌──────────┐    ┌──────────────┐    ┌──────────────┐
+│(Optimized│◀──│ (imports │◀──│ (greedy fill │◀──│  SELECTION   │
+│ Context) │  │  + sigs  │    │  by rank     │    │ (adaptive or │
+│          │  │  + bodies│    │  until       │    │  explicit)   │
+│          │  │  + docs) │    │  budget)     │    │              │
+└──────────┘  └──────────┘    └──────────────┘    └──────────────┘
+                                               ▲
+                                               │
+                    ┌──────────────────────────┘
+                    ▼
+           ┌──────────────────┐
+           │   RANKING        │
+           │ (multi-factor    │
+           │  score:          │
+           │  visibility 15%  │
+           │  callFreq  10%   │
+           │  centrality 20%  │
+           │  typeImp   20%   │
+           │  complexity 5%   │
+           │  taskRel   30%   │
+           └──────────────────┘
 ```
-
-## Strategies
-
-### Signature Only
-Best for: Quick overview, understanding interface
-```
-- Function signatures
-- Class declarations
-- Interface definitions
-- Type definitions
-```
-
-### Token Budget
-Best for: When you have hard limits
-```
-- Fit within N tokens
-- Prioritize by importance
-- Include signatures + best bodies
-```
-
-### Relevant Symbols
-Best for: Focused tasks
-```
-- Only the symbol you're working on
-- Its dependencies
-- Called functions (if callGraph enabled)
-```
-
-### Full Context
-Best for: When you need everything
-```
-- All symbols
-- Full implementations
-- Imports
-```
-
-## Use Cases
-
-### 1. AI Pair Programming
-```typescript
-// Only send relevant code to the AI
-const context = optimizeContext(currentFile, {
-  relevantSymbols: [cursorFunctionName],
-  callGraph: true,
-});
-```
-
-### 2. Code Review
-```typescript
-// Focus only on changes
-const changes = extractDiff(originalFile, modifiedFile);
-```
-
-### 3. Documentation Generation
-```typescript
-// Get structure without noise
-const structure = optimizeContext(code, {
-  includeBodies: false,
-  includeDocstrings: true,
-});
-```
-
-### 4. Context Window Management
-```typescript
-// Batch large projects
-const contexts = optimizeMultiFile(allFiles, {
-  targetTokens: 32000, // Claude's context limit
-});
-```
-
-## Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-```bash
-# Clone and setup
-git clone https://github.com/yourusername/tokenwise
-cd tokenwise
-npm install
-
-# Build
-npm run build
-
-# Test
-npm test
-
-# CLI help
-npx tokenwise --help
-```
-
-## License
-
-MIT
 
 ## Roadmap
 
-- [ ] VS Code Extension (click "Optimize for AI")
-- [ ] RAG integration (semantic code search)
-- [ ] Model-specific optimization (GPT-4 vs Claude vs local)
-- [ ] Embeddings-based similarity search
-- [ ] Tree-sitter WASM integration for better parsing
-- [ ] Continue.dev plugin
-- [ ] GitHub Copilot integration
+- [ ] **Restore map** — reversible compression with `createRestoreMap` / `restoreSymbol`
+- [ ] **VS Code extension** — hover token count, inline optimization preview
+- [ ] **Cache layer** — disk/Redis caching for repeated optimizations
+- [ ] **More languages** — Kotlin, Scala, Dart, Zig, Elixir
+- [ ] **Prompt-aware minification** — keep variable names that appear in the task prompt
 
-## Related
+## License
 
-- [tree-sitter](https://tree-sitter.github.io/) - Incremental parsing
-- [tiktoken](https://github.com/openai/tiktoken) - Token counting
-- [Continue](https://github.com/continuedev/continue) - Open-source AI coding assistant
+MIT — see [LICENSE](LICENSE)

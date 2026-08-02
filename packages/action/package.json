@@ -1,0 +1,23 @@
+{
+  "name": "@tokenwise/action",
+  "version": "0.1.0",
+  "description": "GitHub Action to auto-optimize code context for AI agents on PRs and issues",
+  "type": "module",
+  "bin": {
+    "tokenwise-action": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tokenwise/core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
