@@ -113,6 +113,7 @@ export async function optimizeContext(
     language: opts.language,
     strategy: opts.strategy!,
     minify: strategy.minifyEnabled,
+    maximal: opts.maximal,
     encoding,
   });
 
@@ -217,6 +218,7 @@ export function optimizeContextSync(
     language: opts.language,
     strategy: opts.strategy!,
     minify: strategy.minifyEnabled,
+    maximal: opts.maximal,
     encoding,
   });
 
@@ -398,6 +400,8 @@ interface ResolvedOptions {
   taskType: TaskType;
   includeImports: boolean;
   includeDocumentation: boolean;
+  /** Maximal compression: bare one-line signatures, no imports/header */
+  maximal?: boolean;
   maxTokens?: number;
   targetTokens?: number;
   maxProcessingTimeMs?: number;
@@ -415,6 +419,7 @@ function resolveOptions(_code: string, options: Partial<OptimizationOptions>): R
     taskType: options.taskType ?? 'general',
     includeImports: options.includeImports ?? true,
     includeDocumentation: options.includeDocumentation ?? false,
+    maximal: options.outputFormat === 'maximal' || options.maximal === true,
     maxTokens: options.maxTokens,
     targetTokens: options.targetTokens,
     maxProcessingTimeMs: options.maxProcessingTimeMs ?? 5_000,
@@ -457,6 +462,8 @@ function serializeSymbols(
     language?: string;
     strategy?: string;
     minify?: boolean;
+    /** Maximal compression: bare one-line signatures, no header, no placeholders */
+    maximal?: boolean;
     encoding?: string;
   },
 ): { code: string; chunks: CodeChunk[] } {
@@ -464,8 +471,8 @@ function serializeSymbols(
   const chunks: CodeChunk[] = [];
   let lineNum = 1;
 
-  // Header with metadata (only if we have symbols)
-  if (opts.strategy && !opts.minify && symbols.length > 0) {
+  // Maximal mode: no header at all — every token goes to content
+  if (opts.strategy && !opts.minify && !opts.maximal && symbols.length > 0) {
     lines.push(`// Optimized for ${opts.taskType ?? 'general'} task · ${opts.strategy} strategy`);
     lineNum++;
   }
@@ -473,7 +480,7 @@ function serializeSymbols(
   // Collect unique imports
   const seenImports = new Set<string>();
   let importBlock = '';
-  if (opts.includeImports) {
+  if (opts.includeImports && !opts.maximal) {
     for (const sym of symbols) {
       for (const imp of sym.importStatements ?? []) {
         if (!seenImports.has(imp)) {
@@ -504,7 +511,33 @@ function serializeSymbols(
     }
 
     // Add the symbol
-    if (opts.minify) {
+    if (opts.maximal) {
+      // Bare signature, one line: strip '{ ... }' placeholder, return type, and param types
+      let bare = sym.signature
+        .replace(/\s*\{\s*\.\.\.\s*\}\s*$/, '')   // remove trailing { ... }
+        .replace(/\s*\{\.\.\.\}$/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      // Collapse parameter list to '(...)': strip types inside parens
+      bare = bare.replace(/\(([^)]*)\)/, (m, inner) => {
+        const parts = (inner ?? '').split(',');
+        const names = parts
+          .map(p => p.trim().split(':')[0].trim().split(/\s+/).pop() ?? '')
+          .filter(Boolean);
+        return names.length ? `(${names.join(', ')})` : '()';
+      });
+      // Strip return type after '):'
+      bare = bare.replace(/\)\s*:\s*[^{]+$/, ')');
+      // Minimal: drop keywords too — just the name (highest compression)
+      if (opts.maximal === true && opts.strategy === 'aggressive') {
+        const nameMatch = bare.match(/(?:function|class|interface|enum|type)\s+([\w$]+)/);
+        if (nameMatch) {
+          bare = nameMatch[1];
+        }
+      }
+      lines.push(bare);
+      lineNum++;
+    } else if (opts.minify) {
       // Compact format: symbol on one line
       lines.push(`// ${sym.name}: ${sym.type ?? 'symbol'}`);
       lines.push(content.replace(/\n+/g, ' ').trim());
@@ -515,7 +548,7 @@ function serializeSymbols(
     }
 
     // Separator
-    if (!opts.minify) {
+    if (!opts.minify && !opts.maximal) {
       lines.push('');
       lineNum++;
     }

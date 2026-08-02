@@ -252,7 +252,9 @@ export interface OptimizationOptions {
   enableParallelProcessing?: boolean;
 
   // Output format
-  outputFormat?: 'minimal' | 'standard' | 'verbose' | 'debug';
+  outputFormat?: 'minimal' | 'standard' | 'verbose' | 'debug' | 'maximal';
+  /** Maximal compression: bare one-line signatures, no imports/header */
+  maximal?: boolean;
 }
 
 export interface OptimizationResult {
