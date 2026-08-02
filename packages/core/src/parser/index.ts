@@ -343,11 +343,37 @@ function extractViaRegex(code: string, language: Language): Symbol[] {
       const preceding = code.slice(0, match.index);
       const quotesBefore = (preceding.match(/["'`]/g) || []).length;
       if (quotesBefore % 2 !== 0) continue;
+
+      // For variable/property declarations, skip indented matches
+      // (local `const`/`let`/`var` inside function bodies are noise).
+      // Structural declarations (function/class/interface) are kept regardless
+      // of indentation — they're top-level even when nested or in test fixtures.
+      if (key === 'variableDef' || key === 'propertyDef') {
+        const lineStartIdx = preceding.lastIndexOf('\n') + 1;
+        const matchColumn = match.index - lineStartIdx;
+        if (matchColumn > 0) continue;
+      }
+
       addSymbol(key, match);
     }
   }
 
-  return symbols;
+  // Deduplicate: functionDef and methodDef often match the same top-level function
+  const seen = new Set<string>();
+  const unique: Symbol[] = [];
+  for (const sym of symbols) {
+    const key = `${sym.name}:${sym.startLine}:${sym.endLine}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(sym);
+    }
+  }
+
+  // Filter out local variables inside function bodies — keep only top-level declarations
+  // Top-level types: function, class, interface, typeAlias, enum, constructor, method, module
+  const TOP_LEVEL_TYPES = new Set(['function', 'asyncFunction', 'arrowFunction', 'method', 'class', 'interface', 'typeAlias', 'enum', 'constructor', 'module']);
+  const filtered = unique.filter(sym => TOP_LEVEL_TYPES.has(sym.type));
+  return filtered;
 }
 
 // ════════════════════════════════════════════════════════════
