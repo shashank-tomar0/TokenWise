@@ -268,43 +268,12 @@ npx @tokenwise/cli visualize src/main.ts
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        TOKENWISE CORE PIPELINE                          │
-└─────────────────────────────────────────────────────────────────────────┘
+![TokenWise architecture — symbol-aware context distillation pipeline](docs/tokenwise-architecture.svg)
 
-  INPUT          PARSE           GRAPH BUILD         PAGERANK
-┌──────────┐  ┌──────────┐    ┌──────────────┐    ┌──────────────┐
-│ (code,   │─▶│ (tree-   │───▶│ (calls,      │───▶│ (iterative   │
-│ options) │  │  sitter  │    │  imports,    │    │  centrality  │
-│          │  │ + regex) │    │  inheritance)│    │  on directed │
-└──────────┘  └──────────┘    └──────────────┘    │    graph)    │
-                                                 └──────┬───────┘
-                                                        │
-                                                        ▼
-  OUTPUT        SERIALIZE         SELECTION          STRATEGY
-┌──────────┐  ┌──────────┐    ┌──────────────┐    ┌──────────────┐
-│(Optimized│◀──│ (imports │◀──│ (greedy fill │◀──│  SELECTION   │
-│ Context) │  │  + sigs  │    │  by rank     │    │ (adaptive or │
-│          │  │  + bodies│    │  until       │    │  explicit)   │
-│          │  │  + docs) │    │  budget)     │    │              │
-└──────────┘  └──────────┘    └──────────────┘    └──────────────┘
-                                               ▲
-                                               │
-                    ┌──────────────────────────┘
-                    ▼
-           ┌──────────────────┐
-           │   RANKING        │
-           │ (multi-factor    │
-           │  score:          │
-           │  visibility 15%  │
-           │  callFreq  10%   │
-           │  centrality 20%  │
-           │  typeImp   20%   │
-           │  complexity 5%   │
-           │  taskRel   30%   │
-           └──────────────────┘
-```
+> 🖊️ Diagram drawn in the [Excalidraw](https://excalidraw.com) hand-drawn style.
+> Edit it yourself: open [`docs/tokenwise-architecture.excalidraw`](docs/tokenwise-architecture.excalidraw) at [excalidraw.com](https://excalidraw.com) (File → Import), or regenerate via [`docs/generate-diagram.mjs`](docs/generate-diagram.mjs).
+
+**The pipeline in words:** your code is parsed into symbols (functions, classes, interfaces) → a call graph maps which symbol depends on which → symbols are ranked by importance (task relevance, centrality, visibility) → the serializer greedily fills the token budget, keeping high-rank symbols fully and shrinking the rest to signatures.
 
 ## Roadmap
 
